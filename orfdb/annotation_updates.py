@@ -99,15 +99,6 @@ def update_ensembl_entrez_gene_mapping(gencode_dir, version, session):
     logging.info(f'Added {len(gene_xrefs)} RefSeq gene synonyms')
 
 
-def update_benchling_protein_xrefs(session):
-    """Update Benchling protein cross-references.
-
-    Args:
-        session: SQLAlchemy session object
-    """
-    pass
-
-
 def update_chess_transcript_ids(chess_dir, session):
     """Update CHESS transcript IDs.
 
@@ -207,7 +198,7 @@ def update_chess_transcript_ids(chess_dir, session):
     session.commit()
 
 
-def update_transcript_utr_mapping(gencode_dir, version, session):
+def update_transcript_utr_mapping(session, gencode_expanded_gff):
     """Update transcript UTR mappings.
 
     Args:

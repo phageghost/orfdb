@@ -370,6 +370,21 @@ class TranscriptExon(Base):
     __table_args__ = (UniqueConstraint('transcript_id', 'exon_id', 'exon_number'),)
 
 
+class TranscriptExonCds(Base):
+    """Junction table linking Transcript, Exon, and Cds tables."""
+    
+    __tablename__ = 'transcript_exon_cds'
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    transcript_id: Mapped[int] = mapped_column(ForeignKey('transcript.id'))
+    exon_id: Mapped[int] = mapped_column(ForeignKey('exon.id'))
+    cds_id: Mapped[int] = mapped_column(ForeignKey('cds.id'))
+    exon_number: Mapped[int]
+    attrs: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSON)
+
+    __table_args__ = (UniqueConstraint('transcript_id', 'exon_id', 'cds_id', 'exon_number'),)
+
+
 class TranscriptOrf(Base):
     """Junction table linking Transcript and ORF tables."""
     

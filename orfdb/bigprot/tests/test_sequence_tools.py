@@ -1,6 +1,6 @@
 import Bio.Seq
 
-from orf_finding import sequence_tools, orf_classes
+from orfdb.bigprot import sequence_tools, orf_classes
 
 
 def test_split_sequence_into_codons():

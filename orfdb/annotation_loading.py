@@ -29,23 +29,6 @@ def load_genome_assembly(session: Session, assembly_df: pd.DataFrame, assembly_n
         assembly_df: DataFrame containing assembly information
         assembly_name: Name of the assembly
     """
-    # Add unmapped assembly if it doesn't exist
-    stmt = select(base.Assembly).filter_by(genbank_accession='unmapped')
-    unmapped = session.execute(stmt).scalar_one_or_none()
-    
-    if not unmapped:
-        unmapped = base.Assembly(
-            genbank_accession='unmapped',
-            refseq_accession='unmapped',
-            ucsc_style_name='unmapped',
-            sequence_role='unmapped',
-            assembly_unit='unmapped',
-            assigned_molecule='unmapped',
-            sequence_length=-1,
-            genome_accession='unmapped'
-        )
-        session.add(unmapped)
-        session.commit()
 
     # Process each assembly row
     assemblies_to_add = []
@@ -92,6 +75,24 @@ def load_genome_assembly(session: Session, assembly_df: pd.DataFrame, assembly_n
     # Bulk insert new assemblies
     if assemblies_to_add:
         session.bulk_save_objects(assemblies_to_add)
+        session.commit()
+
+    # Add unmapped assembly if it doesn't exist
+    stmt = select(base.Assembly).filter_by(genbank_accession='unmapped')
+    unmapped = session.execute(stmt).scalar_one_or_none()
+    
+    if not unmapped:
+        unmapped = base.Assembly(
+            genbank_accession='unmapped',
+            refseq_accession='unmapped',
+            ucsc_style_name='unmapped',
+            sequence_role='unmapped',
+            assembly_unit='unmapped',
+            assigned_molecule='unmapped',
+            sequence_length=-1,
+            genome_accession='unmapped'
+        )
+        session.add(unmapped)
         session.commit()
 
     logging.info(f'Added {len(assemblies_to_add)} genome assemblies')
@@ -415,7 +416,7 @@ def load_gencode_transcripts(
             if pd.isna(row.ID_ex[i]):
                 continue
             chrom_starts.append(str(int(row.start_ex[i])))
-            block_sizes.append(str(int(row.end_ex[i] - row.start_ex[i])))
+            block_sizes.append(str(int(row.end_ex[i] - row.start_ex[i]) + 1))
             exon_ids.append((
                 row.exon_number[i],
                 ensembl_orf_exon_map[
@@ -502,11 +503,11 @@ def load_gencode_transcripts(
             for synonym in synonyms:
                 if not synonym:
                     continue
-                transcript_xrefs.append(base.SequenceRegionXref(
-                    sequence_region_id=transcript_map[idx],
+                transcript_xrefs.append(TranscriptXref(
+                    transcript_id=transcript_map[idx],
                     xref=synonym,
                     type='synonym',
-                    sequence_region_dataset_id=dataset_ids['ENSEMBL'],
+                    transcript_dataset_id=dataset_ids['ENSEMBL'],
                     xref_dataset_id=dataset_ids[dataset_name]
                 ))
 
@@ -821,6 +822,64 @@ def load_gencode_transcript_exons(
     logging.info(f'Added {len(transcript_exons)} GENCODE transcript-exon relationships')
 
 
+def load_gencode_transcript_exon_cds(session: Session, cds_gff_df: pd.DataFrame) -> None:
+    """Load transcript-exon-CDS relationships from GENCODE data.
+
+    Args:
+        session: SQLAlchemy session object
+        cds_gff_df: GENCODE GFF dataframe filtered for CDS records
+    """
+
+    cds_gff_df['attrs'] = cds_gff_df['attributes'].apply(parse_attributes)
+    cds_gff_df['exon_id'] = cds_gff_df['attrs'].apply(lambda x: x.get('exon_id', ''))
+    cds_gff_df['transcript_id'] = cds_gff_df['attrs'].apply(lambda x: x.get('transcript_id', ''))
+    cds_gff_df['cds_id'] = cds_gff_df['attrs'].apply(lambda x: x.get('ID', ''))
+    cds_gff_df['exon_number'] = cds_gff_df['attrs'].apply(lambda x: x.get('exon_number', ''))
+    cds_gff_df['protein_id'] = cds_gff_df['attrs'].apply(lambda x: x.get('protein_id', ''))
+
+    ensembl_tx_map = {
+        t.xref: t.transcript_id
+        for t in session.query(TranscriptXref).all()
+    }
+
+    ensembl_exon_map = {
+        t.xref: t.sequence_region_id
+        for t in session.query(SequenceRegionXref).all()
+    }
+
+    cds_map = {
+        (c.start, c.end, c.strand, c.assembly_id): c.id
+        for c in session.query(Cds).all()
+    }
+
+    transcript_exon_cds_ids = {}
+    transcript_exon_cds = []
+
+    for i, row in cds_gff_df.iterrows():
+        transcript_id = ensembl_tx_map[row.transcript_id]
+        exon_id = ensembl_exon_map[row.exon_id]
+        cds_id = cds_map[(row.start, row.end, row.strand, row.assembly_id)]
+
+        id_vals = (transcript_id, exon_id, cds_id, row.exon_number)
+        transcript_exon_cds_ids[id_vals] = row.protein_id
+
+    for (transcript_id, exon_id, cds_id, exon_number), protein_id in transcript_exon_cds_ids.items():
+        transcript_exon_cds.append(base.TranscriptExonCds(
+            transcript_id=transcript_id,
+            exon_id=exon_id,
+            cds_id=cds_id,
+            exon_number=exon_number,
+            attrs={
+                'protein_id': protein_id
+            }
+        ))
+
+    session.bulk_save_objects(transcript_exon_cds)
+    session.commit()
+
+    logging.info(f'Added {len(transcript_exon_cds)} GENCODE transcript-exon-CDS relationships')
+
+
 def load_uniprot(session, uniprot_dir):
     """Load UniProt protein data.
 
@@ -1102,7 +1161,7 @@ def load_refseq_transcripts(session: Session, tx_gff_df: pd.DataFrame, exon_gff_
                 continue
                 
             chrom_starts.append(str(row.start_ex[i]))
-            block_sizes.append(str(row.end_ex[i] - row.start_ex[i]))
+            block_sizes.append(str(row.end_ex[i] - row.start_ex[i] + 1))
             exon_ids.append((row.exon_number[i], vdb_exon_map[(row.start_ex[i], row.end_ex[i], row.strand_ex[i], assembly_id)]))
 
         block_sizes = ';'.join(block_sizes)
@@ -1806,14 +1865,12 @@ def load_chess_transcripts(session: Session, tx_gff_df: pd.DataFrame, exon_gff_d
     )
     transcript_exon_gff_df.set_index(['ID', 'start_tx', 'end_tx', 'strand_tx', 'assembly_id_tx'], inplace=True)
 
-    # Get gene mappings using SQLAlchemy 2.0 style
     stmt = select(SequenceRegionXref).join(Gene, Gene.id == SequenceRegionXref.sequence_region_id)
     synonym_vdb_gene_map = {
         gs.xref: gs.sequence_region_id 
         for gs in session.execute(stmt).scalars().all()
     }
 
-    # Get transcript and exon mappings using SQLAlchemy 2.0 style
     stmt = select(Transcript)
     vdb_transcript_idx_map = {
         t.transcript_idx: t.id 
@@ -1834,7 +1891,6 @@ def load_chess_transcripts(session: Session, tx_gff_df: pd.DataFrame, exon_gff_d
     update_entries = []
     gene_update_entries = []
 
-    # Get unmapped gene using SQLAlchemy 2.0 style
     stmt = select(Gene).filter_by(hgnc_id='unmapped')
     unmapped_gene = session.execute(stmt).scalar_one()
 
@@ -1854,7 +1910,7 @@ def load_chess_transcripts(session: Session, tx_gff_df: pd.DataFrame, exon_gff_d
                 continue
 
             chrom_starts.append(str(row.start_ex[i]))
-            block_sizes.append(str(row.end_ex[i] - row.start_ex[i]))
+            block_sizes.append(str(row.end_ex[i] - row.start_ex[i] + 1))
             exon_ids.append((row.exon_number[i], vdb_exon_map[(row.start_ex[i], row.end_ex[i], row.strand_ex[i], assembly_id)]))
 
         block_sizes = ';'.join(block_sizes)
@@ -1932,14 +1988,12 @@ def load_chess_transcripts(session: Session, tx_gff_df: pd.DataFrame, exon_gff_d
     logging.info(f'Updated {len(update_entries)} transcripts with CHESS info that had exact coordinate matches to GENCODE/RefSeq')
     logging.info(f'Added {len(transcripts)} CHESS transcripts without an exact coordinate match to GENCODE/RefSeq')
 
-    # Get transcript IDs for xrefs using SQLAlchemy 2.0 style
     stmt = select(Transcript)
     vdb_transcript_idx_map = {
         t.transcript_idx: t.id 
         for t in session.execute(stmt).scalars().all()
     }
 
-    # Get dataset IDs using SQLAlchemy 2.0 style
     stmt = select(Dataset)
     dataset_ids = {
         d.name: d.id 
@@ -1960,7 +2014,6 @@ def load_chess_transcripts(session: Session, tx_gff_df: pd.DataFrame, exon_gff_d
                     xref_dataset_id=dataset_ids['CHESS']
                 ))
 
-    # Bulk insert xrefs
     if transcript_xrefs:
         session.bulk_save_objects(transcript_xrefs)
         session.commit()
@@ -2370,3 +2423,98 @@ def parse_attributes(attr_str: str) -> Dict[str, Any]:
             continue
             
     return attrs
+
+
+def update_transcript_utr_mapping(session: Session, gff_df: pd.DataFrame) -> None:
+    """Update transcript UTR mappings.
+
+    Args:
+        session: SQLAlchemy session object
+        gff_df: DataFrame containing GFF data
+    """
+    # Process attributes using parse_attributes
+    gff_df['attrs'] = gff_df['attributes'].apply(parse_attributes)
+    gff_df['transcript_id'] = gff_df['attrs'].apply(lambda x: x.get('transcript_id', ''))
+    gff_df['tag'] = gff_df['attrs'].apply(lambda x: x.get('tag', ''))
+    gff_df['transcript_name'] = gff_df['attrs'].apply(lambda x: x.get('transcript_name', ''))
+    gff_df['exon_number'] = gff_df['attrs'].apply(lambda x: x.get('exon_number', ''))
+    gff_df['transcript_support_level'] = gff_df['attrs'].apply(lambda x: x.get('transcript_support_level', ''))
+
+    utr_five_gff_df = gff_df[
+        gff_df['type'].isin(['five_prime_UTR'])
+    ].copy()
+    utr_three_gff_df = gff_df[
+        gff_df['type'].isin(['three_prime_UTR'])
+    ].copy()
+
+    grouped_utr_five_df = utr_five_gff_df.groupby(
+        ['start', 'end', 'strand', 'assembly_id']
+    ).aggregate(list)
+    grouped_utr_three_df = utr_three_gff_df.groupby(
+        ['start', 'end', 'strand', 'assembly_id']
+    ).aggregate(list)
+
+    ensembl_tx_map = {
+        t.xref: t.transcript_id
+        for t in session.query(TranscriptXref).filter(TranscriptXref.xref_dataset_id == 1).all()
+    }
+    utr5_idx_map = {
+        (u.start, u.end, u.strand, u.assembly_id): u.id
+        for u in session.query(UtrFive).all()
+    }
+    utr3_idx_map = {
+        (u.start, u.end, u.strand, u.assembly_id): u.id
+        for u in session.query(UtrThree).all()
+    }
+
+    utr_five_txs = []
+    utr_tx_entries = set()
+
+    for idx, row in grouped_utr_five_df.iterrows():
+        utr_id = utr5_idx_map[idx]
+        for i, ensembl_id in enumerate(row.transcript_id):
+            transcript_id = ensembl_tx_map[ensembl_id]
+            
+            if not (utr_id, transcript_id) in utr_tx_entries:
+                utr_tx_entries.add((utr_id, transcript_id))
+                utr_five_txs.append(
+                    TranscriptUtrFive(
+                        transcript_id=transcript_id,
+                        utr_five_id=utr_id,
+                        attrs={
+                            "tag": row.tag[i],
+                            "transcript_name": row.transcript_name[i],
+                            "exon_number": row.exon_number[i],
+                            "transcript_support_level": row.transcript_support_level[i]
+                        }
+                    )
+                )
+
+    session.bulk_save_objects(utr_five_txs)
+    session.commit()
+
+    utr_three_txs = []
+    utr_tx_entries = set()
+
+    for idx, row in grouped_utr_three_df.iterrows():
+        utr_id = utr3_idx_map[idx]
+        for i, ensembl_id in enumerate(row.transcript_id):
+            transcript_id = ensembl_tx_map[ensembl_id]
+            
+            if not (utr_id, transcript_id) in utr_tx_entries:
+                utr_tx_entries.add((utr_id, transcript_id))
+                utr_three_txs.append(
+                    TranscriptUtrThree(
+                        transcript_id=transcript_id,
+                        utr_three_id=utr_id,
+                        attrs={
+                            "tag": row.tag[i],
+                            "transcript_name": row.transcript_name[i],
+                            "exon_number": row.exon_number[i],
+                            "transcript_support_level": row.transcript_support_level[i]
+                        }
+                    )
+                )
+                
+    session.bulk_save_objects(utr_three_txs)
+    session.commit()

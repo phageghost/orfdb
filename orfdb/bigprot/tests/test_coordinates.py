@@ -1,6 +1,6 @@
 import pytest
 
-from orf_finding import coordinates, orf_classes
+from orfdb.bigprot import coordinates, orf_classes
 
 
 # sys.path.insert(0, os.path.abspath(

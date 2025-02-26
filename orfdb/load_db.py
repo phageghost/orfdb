@@ -13,7 +13,7 @@ from typing import Optional
 import click
 import pandas as pd
 
-from orfdb import base, settings, annotation_loading
+from orfdb import base, settings, annotation_loading, annotation_updates
 from orfdb.bigprot.find_orfs import perform_analysis
 
 from sqlalchemy_batch_inserts import enable_batch_inserting
@@ -210,8 +210,6 @@ def load_gencode_gff(session, data_dir, gencode_gff_file, gencode_refseq_file):
     utr_five_gff_df = gff_df[gff_df['type'].isin(['five_prime_UTR'])].copy()
     utr_three_gff_df = gff_df[gff_df['type'].isin(['three_prime_UTR'])].copy()
 
-    del gff_df
-
     base.upsert(
         session,
         base.Dataset,
@@ -278,8 +276,16 @@ def load_gencode_gff(session, data_dir, gencode_gff_file, gencode_refseq_file):
     logging.info('Loading GENCODE exon <-> cds relationships')
     annotation_loading.load_gencode_exon_cds(
         session, cds_gff_df)
+    
+    logging.info('Loading GENCODE transcript <-> cds <-> exon relationships')
+    annotation_loading.load_gencode_transcript_exon_cds(
+        session, cds_gff_df)
+
+    logging.info('Updating GENCODE transcript UTR mappings')
+    annotation_loading.update_transcript_utr_mapping(session, gff_df)
 
     # Free up memory
+    del gff_df
     del gene_gff_df
     del tx_gff_df
     del exon_gff_df
@@ -493,13 +499,14 @@ def load_bigprot_tables(session, data_dir, genome_file, bigprot_version=None, ne
             skip_annotation=True,
             transcript_chunk_size=1000,
             max_chunks=1000,
-            num_processes=10,
+            num_processes=64,
             accession_namespace='genbank',
         )
        # except Exception as e:
        #     logging.error(f'Failed to run BigProt analysis: {str(e)}')
        #     return
     
+
     try:
         logging.info('Loading BigProt ORFs')
         annotation_loading.load_bigprot_orfs(session, bigprot_dir)

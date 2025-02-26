@@ -31,18 +31,24 @@ mkdir -p orfdb/data
 cd orfdb/data
 
 # Download GENCODE annotation files
-wget https://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_47/gencode.v47.chr_patch_hapl_scaff.annotation.gff3.gz
-wget https://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_47/gencode.v47.metadata.RefSeq.gz
+wget https://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_47/\
+    gencode.v47.chr_patch_hapl_scaff.annotation.gff3.gz
+wget https://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_47/\
+    gencode.v47.metadata.RefSeq.gz
 
 # Download RefSeq files
-wget https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/001/405/GCF_000001405.40_GRCh38.p14/GCF_000001405.40_GRCh38.p14_genomic.gff.gz
+wget https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/001/405/\
+    GCF_000001405.40_GRCh38.p14/GCF_000001405.40_GRCh38.p14_genomic.gff.gz
 
 # Download CHESS files
-wget https://github.com/chess-genome/chess/releases/download/v.3.1.3/chess3.1.3.GRCh38.gff.gz
+wget https://github.com/chess-genome/chess/releases/download/v.3.1.3/\
+    chess3.1.3.GRCh38.gff.gz
 
 # Download genome files
-wget https://ftp.ncbi.nlm.nih.gov/genomes/all/GCA/000/001/405/GCA_000001405.29_GRCh38.p14/GCA_000001405.29_GRCh38.p14_genomic.fna.gz
-wget https://ftp.ncbi.nlm.nih.gov/genomes/all/GCA/000/001/405/GCA_000001405.29_GRCh38.p14/GCA_000001405.29_GRCh38.p14_assembly_report.txt
+wget https://ftp.ncbi.nlm.nih.gov/genomes/all/GCA/000/001/405/\
+    GCA_000001405.29_GRCh38.p14/GCA_000001405.29_GRCh38.p14_genomic.fna.gz
+wget https://ftp.ncbi.nlm.nih.gov/genomes/all/GCA/000/001/405/\
+    GCA_000001405.29_GRCh38.p14/GCA_000001405.29_GRCh38.p14_assembly_report.txt
 ```
 
 Note: Replace [FTP_URL] with the appropriate FTP locations for each file. The specific versions of these files may be updated over time, so check the respective sources for the latest versions.
