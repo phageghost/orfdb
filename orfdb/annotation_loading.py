@@ -2306,7 +2306,7 @@ def load_bigprot_orfs(session: Session, bigprot_dir: Path) -> None:
     """
     chunk_size = 600000
     bigprot_csv = bigprot_dir.joinpath(
-        'orfset_BigProt_minlen_15_maxlen_999999999_orfs.csv.gz'
+        'orfset_BigProt_minlen_15_maxlen_150_orfs.csv.gz'
     )
 
     reader = pd.read_csv(bigprot_csv, chunksize=chunk_size)
@@ -2345,7 +2345,7 @@ def load_bigprot_transcript_orfs(session: Session, bigprot_dir: Path) -> None:
     """
     chunk_size = 600000
     bigprot_csv = bigprot_dir.joinpath(
-        f'orfset_BigProt_minlen_15_maxlen_999999999_transcript_orfs.csv.gz'
+        f'orfset_BigProt_minlen_15_maxlen_150_transcript_orfs.csv.gz'
     )
 
     reader = pd.read_csv(bigprot_csv, chunksize=chunk_size)
@@ -2373,7 +2373,7 @@ def load_bigprot_cds_orf(session: Session, bigprot_dir: Path) -> None:
     """
     chunk_size = 500000
     bigprot_csv = bigprot_dir.joinpath(
-        f'orfset_BigProt_minlen_15_maxlen_999999999_cds_orfs.csv.gz'
+        f'orfset_BigProt_minlen_15_maxlen_150_cds_orfs.csv.gz'
     )
 
     reader = pd.read_csv(bigprot_csv, chunksize=chunk_size)

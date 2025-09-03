@@ -96,20 +96,20 @@ def load_db_logic(drop_all: bool = False) -> None:
     logging.info(f'Loading {settings.db_connection_string}')
 
     try:
-        logging.info('Loading genome assembly')
-        load_genome_assembly(session, settings.data_dir, settings.genome_assembly)
+        # logging.info('Loading genome assembly')
+        # load_genome_assembly(session, settings.data_dir, settings.genome_assembly)
 
-        logging.info('Loading GENCODE')
-        load_gencode_gff(session, settings.data_dir, settings.gencode_gff, settings.gencode_refseq)
+        # logging.info('Loading GENCODE')
+        # load_gencode_gff(session, settings.data_dir, settings.gencode_gff, settings.gencode_refseq)
 
-        logging.info('Loading RefSeq')
-        load_refseq_gff(session, settings.data_dir, settings.refseq_gff)
+        # logging.info('Loading RefSeq')
+        # load_refseq_gff(session, settings.data_dir, settings.refseq_gff)
 
-        logging.info('Loading CHESS')
-        load_chess_gff(session, settings.data_dir, settings.chess_gff)
+        # logging.info('Loading CHESS')
+        # load_chess_gff(session, settings.data_dir, settings.chess_gff)
 
-        # logging.info('Loading BigProt')
-        # load_bigprot_tables(session, settings.data_dir, settings.genome, settings.bigprot_version, new_run=True)
+        logging.info('Loading BigProt')
+        load_bigprot_tables(session, settings.data_dir, settings.genome, settings.bigprot_version, new_run=True)
         
         session.commit()
 
@@ -480,24 +480,30 @@ def load_bigprot_tables(session, data_dir, genome_file, bigprot_version=None, ne
     else:
         bigprot_version = str(bigprot_version.name)
 
-    bigprot_version = bump_version(bigprot_version)
+    # bigprot_version = bump_version(bigprot_version)
     bigprot_dir = data_dir.joinpath('bigprot', bigprot_version)
 
     required_files = [
-        f'orfset_BigProt_minlen_15_maxlen_999999999_orfs.csv.gz',
-        f'orfset_BigProt_minlen_15_maxlen_999999999_transcript_orfs.csv.gz',
-        f'orfset_BigProt_minlen_15_maxlen_999999999_cds_orfs.csv.gz'
+        f'orfset_BigProt_minlen_15_maxlen_150_orfs.csv.gz',
+        f'orfset_BigProt_minlen_15_maxlen_150_transcript_orfs.csv.gz',
+        f'orfset_BigProt_minlen_15_maxlen_150_cds_orfs.csv.gz'
     ]
 
-    files_exist = all(
-        bigprot_dir.joinpath(filename).exists() 
-        for filename in required_files
-    )
-
+    files_exist = True
+    for filename in required_files:
+        this_fpath = bigprot_dir.joinpath(filename)
+        if not this_fpath.exists():
+            logging.error(f'BigProt analysis file {this_fpath} missing, aborting ...')
+            files_exist = False
+            break
     if not files_exist:
-        logging.info('BigProt analysis files missing, running analysis...')
+        # logging.info('BigProt analysis files missing, running analysis...')
+        logging.error('BigProt analysis files missing, aborting ...')
+        return
+
         #try:
         perform_analysis(
+            gtf_file_fpath='',
             output=str(bigprot_dir),
             verbose=False,
             dataset_name='BigProt',

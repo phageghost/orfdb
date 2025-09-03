@@ -11,9 +11,9 @@ from typing import Dict, List, Set, Tuple
 import numpy as np
 import pyBigWig
 
-import orfdb.bigprot.misc
-from . import coordinates
-from . import validation
+from orfdb.bigprot import misc
+from orfdb.bigprot import coordinates
+from orfdb.bigprot import validation
 
 logger = logging.getLogger(__name__)
 
@@ -186,9 +186,9 @@ class BwTracks:
         chrom_length = int(parent_transcript_dict['assembly.sequence_length'])
         chrom = parent_transcript_dict['assembly.ucsc_style_name']
 
-        gff_chrom_starts = orf_finding.misc.extract_numeric_vector(orf_dict['orf.chrom_starts'],
+        gff_chrom_starts = misc.extract_numeric_vector(orf_dict['orf.chrom_starts'],
                                                                    remove_dangling_separators=True)
-        gff_block_sizes = orf_finding.misc.extract_numeric_vector(orf_dict['orf.block_sizes'],
+        gff_block_sizes = misc.extract_numeric_vector(orf_dict['orf.block_sizes'],
                                                                   remove_dangling_separators=True)
         validation.validate_chrom_starts_block_sizes(
             gff_chrom_starts, gff_block_sizes)

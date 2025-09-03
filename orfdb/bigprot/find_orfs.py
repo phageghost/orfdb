@@ -134,6 +134,7 @@ def setup_argparser() -> argparse.Namespace:
 def perform_analysis(output: str,
                      dataset_name: str,
                      genome_fasta_fpath: str,
+                     gtf_file_fpath: str,
                      db_settings_fpath: str,
                      skip_annotation: bool,
                      min_codon_length: int,
@@ -201,6 +202,9 @@ def perform_analysis(output: str,
 
     if db_settings_fpath is None:
         logger.info('No DB settings file provided, skipping DB connection.')
+        transcripts_by_id = {}
+        exons_by_transcript = {}
+        cdss_by_exon = {}
         
     else:
         # Load database tables
