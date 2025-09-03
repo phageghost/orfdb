@@ -1,0 +1,7 @@
+{
+    "python.defaultInterpreterPath": "${env:CONDA_PREFIX}/bin/python",
+    "python.analysis.extraPaths": [
+        "${workspaceFolder}"
+    ],
+    "python.analysis.diagnosticMode": "workspace"
+} 
