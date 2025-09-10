@@ -57,7 +57,7 @@ self.db_connection_string = ('postgresql://%s:%s@%s/%s' %
                               config['DATABASE']['postgres_database']
                             ))
 
-self.data_dir = Path(settings_ini).parent.joinpath('data')
+self.data_dir = Path(config['DATA']['data_dir'])
 
 try:
     self.gencode_gff = Path(config['DATA']['gencode_gff'])
@@ -90,7 +90,7 @@ except NoOptionError:
     raise Exception('chess_gff was not supplied in settings.ini')
 
 try:
-    self.bigprot_directory = Path(settings_ini).parent.joinpath('data', 'bigprot')
+    self.bigprot_directory = self.data_dir.joinpath('bigprot')
 except NoOptionError:
     raise Exception('bigprot_directory was not supplied in settings.ini')
 

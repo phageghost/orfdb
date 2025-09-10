@@ -231,8 +231,6 @@ def load_gencode_exons(session: Session, exon_gff_df: pd.DataFrame) -> None:
         exon_gff_df: GENCODE GFF dataframe filtered for exons
         assembly_ids: Mapping of sequence IDs to assembly IDs
     """
-
-
     # Group by unique columns to handle redundant entries
     unique_cols = ['start', 'end', 'strand', 'assembly_id']
     exon_gff_df.sort_values(by=unique_cols, inplace=True)

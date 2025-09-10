@@ -6,7 +6,7 @@ nucleotide probabilities, codon counts and frequencies, extracting sequence bloc
 import collections
 import logging
 import typing
-from typing import Dict, List, Optional, Set, Union, Any, Tuple
+from typing import Dict, List, Optional, Set, Union, Tuple
 
 import Bio
 import Bio.Seq

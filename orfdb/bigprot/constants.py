@@ -25,7 +25,7 @@ DEFAULT_GENBANK_FASTA_FPATH = '/home/ubuntu/data/hg38_genbank/GCA_000001405.28_G
 DEFAULT_VELIADB_SETTINGS_FPATH = '/home/ubuntu/orfdb/settings.ini'
 
 GFF_FIELDS = ['seqname', 'source', 'feature', 'start',
-              'end', 'score', 'strand', 'frame', 'attribute']
+              'end', 'score', 'strand', 'frame', 'attributes']
 
 DEFAULT_MOTIF_PSEUDOCOUNT = 0.5
 
